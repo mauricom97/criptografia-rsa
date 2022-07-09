@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "commander": "^9.3.0",
-    "forge": "^2.3.0"
+    "forge": "^2.3.0",
+    "jsbi": "^4.3.0"
   }
 }

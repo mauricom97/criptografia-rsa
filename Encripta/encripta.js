@@ -1,5 +1,6 @@
 const fs = require('fs')
 const { program } = require('commander')
+const caracteres = require('./caracteres.json')
 const encript = async () => {
   try {
     
@@ -12,18 +13,21 @@ const encript = async () => {
     
     
     let contentText = getContentFile(options.encripta)
-    console.log(contentText)
-    const contentEncoder = encoder(contentText)
-    setCripto(options.encripta, contentEncoder)
-
     
     const numbersPrime = getNumbersPrime()
     
-    const publicKey = numbersPrime[0] * numbersPrime[1]
-    const phiPublicKey = (numbersPrime[0] - 1) * (numbersPrime[1] - 1)
-    let primeBetweenOneAndPhi = await isPrimePhiPublicKey(phiPublicKey)
+    let publicKey = numbersPrime[0] * numbersPrime[1]
+    let phiPublicKey = (numbersPrime[0] - 1) * (numbersPrime[1] - 1)
+    let primeBetweenOneAndPhi = await isPrimePhiPublicKey(phiPublicKey) //e
     createFilePublicsKeys('./files/publicKey.txt', publicKey, primeBetweenOneAndPhi)
-    
+    let secretKey = (2 * phiPublicKey) + (1 / primeBetweenOneAndPhi)
+
+    createFileSercretKey('./files/secretKey.txt', secretKey)
+    const contentBase64 = to64(contentText)
+    let contentCripto = encode(contentBase64, primeBetweenOneAndPhi, publicKey)
+
+    setCripto(options.encripta, contentCripto)
+
   } catch (error) {
     console.log(error)
   }
@@ -35,7 +39,6 @@ function getContentFile(path) {
 }
 
 function setCripto(path, content) {
-  console.log(content)
   fs.writeFile(path, content.toString(), function (erro) {
     if (erro) {
       throw erro;
@@ -60,20 +63,37 @@ function getNumbersPrime() {
   return numbers
 }
 
-function encoder(contentText) {
+function encode(content, primePhi, publicKey) {
+  let contentCripto = ''
+  for(let letter of content){
+    for(let caracter in caracteres){
+      if(letter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "") === caracter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")){
+        contentCripto += (caracteres[caracter] ** primePhi) % (publicKey)
+        break
+      }
+    }
+  }
+  
+  let newMessage = ''
+  let aux = ''
+  for(let i = 0; i < contentCripto.length; i++){
+    aux += contentCripto[i]
+    if(aux.length === 20){
+      newMessage += `${aux}\n`
+      aux = ''
+    }
+  }
+
+  return newMessage
+}
+
+function to64(contentText) {
   let content = btoa(contentText)
   return content
 }
 
 async function isPrimePhiPublicKey(key) {
-  let prime = getNumbersPrime()
-  prime = prime[0]
-  while(prime >= key){
-    prime = getNumbersPrime()
-    prime = prime[0]
-  }
-  console.log(prime)
-  return prime
+  return 2
 }
 
 function createFilePublicsKeys(path, key1, key2) {
@@ -82,6 +102,13 @@ function createFilePublicsKeys(path, key1, key2) {
     if (erro) {
       throw erro;
     }
-    console.log("Arquivo criptografado com sucesso!")
+  })
+}
+
+function createFileSercretKey(path, key) {
+  fs.writeFile(path, key.toString(), function (erro) {
+    if (erro) {
+      throw erro;
+    }
   })
 }
