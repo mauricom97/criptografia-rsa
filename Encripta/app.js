@@ -1,30 +1,34 @@
 const fs = require('fs')
 const { program } = require('commander')
 const caracteres = require('./caracteres.json')
+const TextChunk = require('../Decripta/TextChunk')
+
+
 const encript = async () => {
   try {
-    
+
     program
-    .description('A sample application to parse options')
-    .option('-encripta, --encripta <VALUE>', 'Specify a VALUE', 'Foo')
-    
+      .description('A sample application to parse options')
+      .option('-encripta, --encripta <VALUE>', 'Specify a VALUE', 'Foo')
+
     program.parse()
     const options = program.opts()
-    
-    
+
+
     let contentText = getContentFile(options.encripta)
     
     const numbersPrime = getNumbersPrime()
     
-    let publicKey = numbersPrime[0] * numbersPrime[1]
-    let phiPublicKey = (numbersPrime[0] - 1) * (numbersPrime[1] - 1)
-    let primeBetweenOneAndPhi = await isPrimePhiPublicKey(phiPublicKey) //e
-    createFilePublicsKeys('./files/publicKey.txt', publicKey, primeBetweenOneAndPhi)
-    let secretKey = (2 * phiPublicKey) + (1 / primeBetweenOneAndPhi)
+    let firstPublicKey = BigInt(numbersPrime[0]) * BigInt(numbersPrime[1])
+    let phiFirstPublicKey = (BigInt(numbersPrime[0]) - BigInt(1)) * (BigInt(numbersPrime[1]) - BigInt(1))
+    let secondPublicKey = BigInt(await getSecondPublicKey(phiFirstPublicKey))
 
-    createFileSercretKey('./files/secretKey.txt', secretKey)
+    createFilePublicsKeys('./files/publicKey.txt', firstPublicKey, secondPublicKey)
+    let secretKey = (BigInt(2) * BigInt(phiFirstPublicKey) + BigInt(1)) / BigInt(secondPublicKey)
+
+    createFileSercretKey('./files/secretKey.txt', secretKey, firstPublicKey)
     const contentBase64 = to64(contentText)
-    let contentCripto = encode(contentBase64, primeBetweenOneAndPhi, publicKey)
+    let contentCripto = encode(contentBase64, secondPublicKey, firstPublicKey)
 
     setCripto(options.encripta, contentCripto)
 
@@ -48,42 +52,30 @@ function setCripto(path, content) {
 }
 
 function getNumbersPrime() {
-  let numbersPrimes = fs.readFileSync('./primeList.txt', 'utf-8')
-  numbers = numbersPrimes.split('\n')
-  numbersPrimes = new Array()
-  for (let number of numbers) {
-    number = number.replace(/[^0-9]/g, '');
-    number = parseInt(number)
-    numbersPrimes.push(number)
-  }
-  numbers = new Array()
-  for (let i = 0; i < 2; i++) {
-    numbers.push(numbersPrimes[Math.floor(Math.random() * numbersPrimes.length)])
-  }
-  return numbers
+  let numbersPrimes = [10000000121, 10000000141]
+  return numbersPrimes
 }
 
 function encode(content, primePhi, publicKey) {
   let contentCripto = ''
-  for(let letter of content){
-    for(let caracter in caracteres){
-      if(letter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "") === caracter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")){
-        contentCripto += (caracteres[caracter] ** primePhi) % (publicKey)
+  for (let letter of content) {
+    for (let caracter in caracteres) {
+      if (letter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "") === caracter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")) {
+        contentCripto += (BigInt(caracteres[caracter]) ** BigInt(primePhi)) % (BigInt(publicKey))
         break
       }
     }
   }
-  
+
   let newMessage = ''
   let aux = ''
-  for(let i = 0; i < contentCripto.length; i++){
+  for (let i = 0; i < contentCripto.length; i++) {
     aux += contentCripto[i]
-    if(aux.length === 20){
+    if (aux.length === 20) {
       newMessage += `${aux}\n`
       aux = ''
     }
   }
-
   return newMessage
 }
 
@@ -92,8 +84,8 @@ function to64(contentText) {
   return content
 }
 
-async function isPrimePhiPublicKey(key) {
-  return 2
+async function getSecondPublicKey() {
+  return 17
 }
 
 function createFilePublicsKeys(path, key1, key2) {
@@ -105,8 +97,9 @@ function createFilePublicsKeys(path, key1, key2) {
   })
 }
 
-function createFileSercretKey(path, key) {
-  fs.writeFile(path, key.toString(), function (erro) {
+function createFileSercretKey(path, secretKey, publicKey) {
+  const secretKeyFile = `${secretKey}\n${publicKey}`
+  fs.writeFile(path, secretKeyFile, function (erro) {
     if (erro) {
       throw erro;
     }
