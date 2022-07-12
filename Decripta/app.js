@@ -1,6 +1,5 @@
 const fs = require('fs')
 const { program } = require('commander')
-const bigInt = require("big-integer");
 const TextChunk = require('./TextChunk')
 const caracteres = require('./caracteres.json')
 
@@ -47,12 +46,12 @@ function decifre(contentMsgEncript, _secretKey) {
         messageOriginal += originLetter
     }
     console.log(messageOriginal)
-    // let contentText = ''
-    // for(let letter of messageOriginal) {
-    //     for(let caracter in caracteres) {
-    //         if(letter == caracteres[caracter]) {
-    //             contentText += caracter
-    //         }
-    //     }
-    // }
+    let contentText = ''
+    for(let letter of messageOriginal) {
+        for(let caracter in caracteres) {
+            if(letter == caracteres[caracter]) {
+                contentText += caracter
+            }
+        }
+    }
 }
