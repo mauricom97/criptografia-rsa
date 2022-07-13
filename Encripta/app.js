@@ -1,7 +1,11 @@
 const fs = require('fs')
 const { program } = require('commander')
-const caracteres = require('./caracteres.json')
-const TextChunk = require('../Decripta/TextChunk')
+const JSBI = require('jsbi')
+const TextChunk = require('../Encripta/TextChunk')
+
+const originalChunk = new TextChunk('ab')
+// console.log(originalChunk.bigIntValue)
+// console.log(new TextChunk().bigIntToText(BigInt(originalChunk.bigIntValue)))
 
 
 const encript = async () => {
@@ -52,31 +56,33 @@ function setCripto(path, content) {
 }
 
 function getNumbersPrime() {
-  let numbersPrimes = [10000000121, 10000000141]
+  let numbersPrimes = fs.readFileSync('./primeList.txt', 'utf-8')
+  numbersPrimes = numbersPrimes.split('\n')
+  let numbers = new Array()
+  for(let i = 0; i < 2; i++) {
+    numbers.push(numbersPrimes[Math.floor(Math.random() * numbersPrimes.length)])
+  }
+  numbersPrimes = new Array()
+  for(let number of numbers) {
+    number = number.replace(/\D/g, "")
+    numbersPrimes.push(BigInt(number))
+  }
   return numbersPrimes
 }
 
 function encode(content, primePhi, publicKey) {
   let contentCripto = ''
+  let partString = ''
   for (let letter of content) {
-    for (let caracter in caracteres) {
-      if (letter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "") === caracter.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")) {
-        contentCripto += (BigInt(caracteres[caracter]) ** BigInt(primePhi)) % (BigInt(publicKey))
-        break
-      }
+    if(partString.length < 4) {
+      partString += letter
+    } else {
+      partString = new TextChunk(partString).bigIntValue
+      partString = (partString ** primePhi) % publicKey
+      contentCripto += partString
     }
   }
-
-  let newMessage = ''
-  let aux = ''
-  for (let i = 0; i < contentCripto.length; i++) {
-    aux += contentCripto[i]
-    if (aux.length === 20) {
-      newMessage += `${aux}\n`
-      aux = ''
-    }
-  }
-  return newMessage
+  return contentCripto
 }
 
 function to64(contentText) {
